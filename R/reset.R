@@ -15,6 +15,9 @@ library(tmaptools)
 library(scico)
 library(scales)
 
+##
+source("R/help.R")
+
 ## Shapes
 lsoas <- 
   read_sf("data/Lower_Layer_Super_Output_Areas__December_2011__Boundaries_EW_BGC-shp/Lower_Layer_Super_Output_Areas__December_2011__Boundaries_EW_BGC.shp") %>%
@@ -57,5 +60,3 @@ ggplot(deprivation) +
                     labels = labeller(deprivation$index_of_multiple_deprivation_imd_score, 5),
                     name = "deprivation score") +
   theme_map()
-
-
