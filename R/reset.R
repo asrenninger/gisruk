@@ -38,3 +38,24 @@ data_spatial <-
   mutate_at(variables, scale) %>% 
   filter(seqnum != 18582 & seqnum != 15695) %>%
   st_as_sf()
+
+## Left
+deprivation <- 
+  vroom("data/imd.csv") %>% 
+  clean_names() %>%
+  rename(lsoa11cd = lsoa_code_2011) %>%
+  left_join(lsoas) %>%
+  st_as_sf()
+
+## Exploration
+names(deprivation)
+
+ggplot(deprivation) + 
+  geom_sf(aes(fill = discreter(index_of_multiple_deprivation_imd_score, 5)), lwd = 0) +
+  scale_fill_manual(values = scico(palette = 'lajolla', 10),
+                    guide = guide_discrete,
+                    labels = labeller(deprivation$index_of_multiple_deprivation_imd_score, 5),
+                    name = "deprivation score") +
+  theme_map()
+
+
