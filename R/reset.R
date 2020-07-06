@@ -55,8 +55,32 @@ names(deprivation)
 
 ggplot(deprivation) + 
   geom_sf(aes(fill = discreter(index_of_multiple_deprivation_imd_score, 5)), lwd = 0) +
-  scale_fill_manual(values = scico(palette = 'lajolla', 10),
+  scale_fill_manual(values = scico(palette = 'lajolla', 5),
                     guide = guide_discrete,
                     labels = labeller(deprivation$index_of_multiple_deprivation_imd_score, 5),
                     name = "deprivation score") +
+  theme_map()
+
+ggplot(data_spatial) + 
+  geom_sf(aes(fill = discreter(ffood_d, 5)), lwd = 0) +
+  scale_fill_manual(values = scico(palette = 'turku', 5),
+                    guide = guide_discrete,
+                    labels = labeller(deprivation$index_of_multiple_deprivation_imd_score, 5),
+                    name = "fast food (d)") +
+  theme_map()
+
+ggplot(data_spatial) + 
+  geom_sf(aes(fill = discreter(green900, 5)), lwd = 0) +
+  scale_fill_manual(values = scico(palette = 'turku', 5),
+                    guide = guide_discrete,
+                    labels = labeller(deprivation$index_of_multiple_deprivation_imd_score, 5),
+                    name = "green space (d)") +
+  theme_map()
+
+ggplot(data_spatial) + 
+  geom_sf(aes(fill = discreter(pharm_d, 5)), lwd = 0) +
+  scale_fill_manual(values = scico(palette = 'turku', 5),
+                    guide = guide_discrete,
+                    labels = labeller(deprivation$index_of_multiple_deprivation_imd_score, 5),
+                    name = "pharmacy (d)") +
   theme_map()
