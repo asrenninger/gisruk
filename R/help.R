@@ -120,6 +120,26 @@ theme_map <- function () {
   
 }
 
+theme_ver <- function () {
+  theme_minimal() +
+    theme(plot.background = element_rect(fill = 'transparent', colour = 'transparent'),
+          panel.grid.major.x = element_line(size = 0.1, colour = 'grey50'),
+          panel.grid.major.y = element_line(size = 0.1, colour = 'grey50'),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          axis.line.y = element_line(size = 0.5, colour = 'black'),
+          axis.line.x = element_blank(),
+          axis.ticks.y = element_line(size = 0.5, colour = 'black'),
+          axis.ticks.x = element_line(size = 0.1, colour = 'grey50'),
+          axis.text.x = element_text(face = 'bold'),
+          axis.text.y = element_text(face = 'bold'),
+          plot.title = element_text(face = 'bold', colour = 'grey50'),
+          plot.subtitle =  element_text(face = 'plain', colour = 'black'),
+          strip.text = element_text(face = 'bold', colour = 'black'),
+          plot.margin = margin(5, 5, 5, 5)
+    )
+}
+
 ## Guides
 guide_discrete <-
   guide_legend(direction = "horizontal",
