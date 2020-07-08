@@ -1,2 +1,2 @@
-# casa
-hack-a-thon
+# gisruk 2020
+analysis with spatial weights
