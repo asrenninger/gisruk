@@ -140,6 +140,49 @@ theme_ver <- function () {
     )
 }
 
+theme_hor <- function () {
+  theme_minimal() +
+    theme(plot.background = element_rect(fill = 'transparent', colour = 'transparent'),
+          panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_line(size = 0.1, colour = 'grey50'),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          axis.line.x = element_line(size = 0.5, colour = 'black'),
+          axis.line.y = element_blank(),
+          axis.ticks.x = element_line(size = 0.5, colour = 'black'),
+          axis.ticks.y = element_line(size = 0.1, colour = 'grey50'),
+          axis.text.x = element_text(face = 'bold'),
+          axis.text.y = element_text(face = 'bold'),
+          plot.title = element_text(face = 'bold', colour = 'grey50'),
+          plot.subtitle =  element_text(face = 'plain', colour = 'black', size = 15),
+          strip.text = element_text(face = 'bold', colour = 'black'),
+          plot.margin = margin(5, 5, 5, 5)
+    )
+}
+
+theme_cor <- function() {
+  theme_minimal() +
+    theme(legend.text = element_text(angle = 90),
+          legend.title = element_text(angle = 90),
+          axis.text.x = element_text(angle = 90, vjust = 1, 
+                                     size = 8, hjust = 1),
+          axis.text.y = element_text(angle = 0, vjust = 1,
+                                     size = 8, hjust = 1),
+          axis.title.x = element_blank(), 
+          axis.title.y = element_blank(),
+          panel.grid.major = element_line(size = 0.25), 
+          panel.grid.minor = element_line(size = 0.25), 
+          legend.position = c(0.25, 0.75),
+          panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.ticks.y = element_blank())
+}
+
 ## Guides
 guide_discrete <-
   guide_legend(direction = "horizontal",
@@ -151,3 +194,14 @@ guide_discrete <-
                label.hjust = 1,
                nrow = 1,
                byrow = TRUE)
+
+guide_continuous <- 
+  guide_colorbar(direction = "vertical",
+                 barheight = unit(50, units = "mm"),
+                 barwidth = unit(2, units = "mm"),
+                 draw.ulim = FALSE,
+                 title.position = 'right',
+                 label.position = 'left',
+                 title.hjust = 0.5,
+                 label.hjust = 0.5)
+
