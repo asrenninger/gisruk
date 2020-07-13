@@ -1,8 +1,8 @@
 ###########################################################
-# Help functions
+# Helpers
 ##########################################################
 
-correlate <- function(correlations) {
+correlate <- function(correlations, name) {
   
   mat <- round(cor(correlations), 2)
   
@@ -67,7 +67,7 @@ correlate <- function(correlations) {
     ggheatmap +
     geom_text(aes(Var2, Var1, label = value, colour = value), size = 3) 
   
-  ggsave(ggmatrix, filename = "corplot.png", height = 10, width = 10, dpi = 300)
+  ggsave(ggmatrix, filename = name, height = 10, width = 10, dpi = 300)
   
   return(ggmatrix)
   
@@ -204,4 +204,5 @@ guide_continuous <-
                  label.position = 'left',
                  title.hjust = 0.5,
                  label.hjust = 0.5)
+
 
