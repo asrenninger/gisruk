@@ -64,7 +64,29 @@ lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_ma
   summary() %>%
   use_series("coef")
 
+## Spatial data
+authorities <-
+  st_read("data/authorities.shp") %>%
+  clean_names() %>%
+  rename(area = st_rshp,
+         leng = st_lngt) %>%
+  select(code, area, leng) %>%
+  st_simplify()
+
+background <- 
+  authorities %>%
+  st_union() %>%
+  st_combine()
+
 ##
+
+plot(background)
+
+##
+
+
+
+
 
 
 

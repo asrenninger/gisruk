@@ -16,6 +16,7 @@ library(tmaptools)
 library(scico)
 library(scales)
 
+library(spdep)
 library(spgwr)
 library(GWmodel)
 library(gwrr)
