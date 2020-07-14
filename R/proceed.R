@@ -71,7 +71,9 @@ authorities <-
   rename(area = st_rshp,
          leng = st_lngt) %>%
   select(code, area, leng) %>%
-  st_simplify()
+  filter(str_detect(code, "E|W|S")) %>%
+  filter(code != "S12000027") %>%
+  ms_simplify(keep = 0.005)
 
 background <- 
   authorities %>%
@@ -81,6 +83,13 @@ background <-
 ##
 
 plot(background)
+
+##
+
+tmap_mode("view")
+
+tm_shape(authorities) +
+  tm_polygons()
 
 ##
 
