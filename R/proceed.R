@@ -166,14 +166,15 @@ lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_ma
 
 ## Spatial data
 authorities <-
-  st_read("data/authorities.shp") %>%
+  read_sf("data/authorities.shp") %>%
   clean_names() %>%
   rename(area = st_rshp,
          leng = st_lngt) %>%
   select(code, area, leng) %>%
   filter(str_detect(code, "E|W|S")) %>%
   filter(code != "S12000027") %>%
-  ms_simplify(keep = 0.005)
+  ms_simplify(keep = 0.01)  %>%
+  st_transform(27700)
 
 background <- 
   authorities %>%
@@ -232,9 +233,222 @@ income <-
 names(income) <- str_replace_all(names(income), pattern = "x", replacement = "income_")
 
 ## Regressing
+data <- 
+  expectancy %>%
+  mutate(difference_male = life_expectancy_at_birth_for_males_2009_2013 - healthy_life_expectancy_for_males_2009_2013,
+         difference_female = life_expectancy_at_birth_for_females_2009_2013 - healthy_life_expectancy_for_females_2009_2013_years) %>%
+  left_join(area) %>%
+  left_join(rururb) %>%
+  left_join(deaths) %>%
+  left_join(income) %>%
+  left_join(authorities) %>%
+  st_as_sf() %>%
+  select(code, region, everything())
+
+##
+
+left <-
+  data %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2) %>%
+  select(code, region, lower_tier_local_authority, HLE, everything()) %>%
+  filter(code != "E06000053") %>%
+  as('Spatial')
+
+## Indexing
+left$pollution <- scale(left$no2) + scale(left$pm10) + scale(left$so2)
+
+##
+
+bandwidth <- gwr.sel(HLE ~ pollution, 
+                     data = left)
+
+geogress <- gwr(HLE ~ pollution, 
+                data = left, 
+                bandwidth = bandwidth)
 
 ## Moransiing
+autocorrelating <- 
+  expectancy %>%
+  mutate(difference_male = life_expectancy_at_birth_for_males_2009_2013 - healthy_life_expectancy_for_males_2009_2013,
+         difference_female = life_expectancy_at_birth_for_females_2009_2013 - healthy_life_expectancy_for_females_2009_2013_years) %>%
+  mutate(difference = ((difference_male + difference_female) / 2)) %>%
+  left_join(authorities) %>%
+  drop_na() %>%
+  st_as_sf() 
 
+coords <- 
+  autocorrelating %>%
+  st_centroid() %>%
+  st_coordinates()
+
+plot(background)
+plot(autocorrelating[, 1], add = T)
+
+## Global
+nearest <- knn2nb(knearneigh(coords, 5))
+weights <- nb2listw(nearest, style = "W")
+
+moranstest <- moran.test(autocorrelating$difference, weights)
+montecarlo <- moran.mc(autocorrelating$difference, weights, nsim = 999)
+
+moranstest
+
+ggplot(as.data.frame(montecarlo$res), aes(montecarlo$res)) + 
+  geom_histogram(binwidth = 0.01) +
+  geom_vline(aes(xintercept = 0.466), colour = "grey70",size = 1) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  labs(title = "observed and permuted Moran's I",
+       subtitle = "I = 0.466 | P < 0.01",
+       x = "results",
+       y = "count") +
+  theme_ver()
+
+## Local
+moransi <- localmoran(autocorrelating$difference, weights) %>% as_tibble()
+
+autocorrelating <- 
+  autocorrelating %>%
+  st_transform(27700) %>%
+  bind_cols(moransi) %>%
+  rename(locali = Ii,
+         expectation = E.Ii,
+         variance = Var.Ii,
+         deviation = Z.Ii,
+         p_value = `Pr(z > 0)`)
+
+##
+
+map_moran_v <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = autocorrelating,
+          aes(fill = factor(ntile(difference, 5))), size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = 'cork', 5),
+                    labels = as.character(quantile(autocorrelating$difference,
+                                                   c(.1,.2,.4,.6,.8),
+                                                   na.rm = TRUE)),
+                    name = "difference",
+                    guide = guide_discrete) +
+  labs(title = "difference") +
+  theme_map()
+
+map_moran_i <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = autocorrelating,
+          aes(fill = factor(ntile(locali, 5))), size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = 'cork', 5),
+                    labels = str_sub(as.character(quantile(autocorrelating$locali,
+                                                           c(.1,.2,.4,.6,.8),
+                                                           na.rm = TRUE)), 1, 4),
+                    name = "i value",
+                    guide = guide_discrete) +
+  labs(title = "local moran's i") +
+  theme_map()
+
+map_moran_p <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = autocorrelating,
+          aes(fill = factor(ntile(p_value, 5))), size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = 'cork', 5),
+                    labels = str_sub(as.character(quantile(autocorrelating$p_value,
+                                                           c(.1,.2,.4,.6,.8),
+                                                           na.rm = TRUE)), 1, 4),
+                    name = "p value",
+                    guide = guide_discrete) +
+  labs(title = "p value") +
+  theme_map()  
+
+library(patchwork)
+
+p <- map_moran_v + map_moran_i + map_moran_p
+
+ggsave(filename = "moran.png", height = 6, width = 10)
+
+##
+
+autocorrelating <- 
+  autocorrelating %>%
+  mutate(scaled_difference = scale(difference)) %>%
+  select(difference, scaled_difference, locali, expectation, variance, deviation, p_value) %>%
+  mutate(lagged_difference = lag.listw(weights, scaled_difference),
+         quad_sig = NA)
+
+##
+
+autocorrelating <-
+  autocorrelating %>%
+  mutate(quad_sig_1 = 
+           case_when(scaled_difference >= 0 & lagged_difference >= 0 & p_value <= 0.01 ~ 1,
+                     scaled_difference <= 0 & lagged_difference <= 0 & p_value <= 0.01 ~ 2,
+                     scaled_difference >= 0 & lagged_difference <= 0 & p_value <= 0.01 ~ 3,
+                     scaled_difference >= 0 & lagged_difference <= 0 & p_value <= 0.01 ~ 4,
+                     scaled_difference <= 0 & lagged_difference >= 0 & p_value <= 0.01 ~ 5)) %>%
+  mutate(quad_sig_2 = 
+           case_when(scaled_difference >= 0 & lagged_difference >= 0 & p_value <= 0.05 ~ 1,
+                     scaled_difference <= 0 & lagged_difference <= 0 & p_value <= 0.05 ~ 2,
+                     scaled_difference >= 0 & lagged_difference <= 0 & p_value <= 0.05 ~ 3,
+                     scaled_difference >= 0 & lagged_difference <= 0 & p_value <= 0.05 ~ 4,
+                     scaled_difference <= 0 & lagged_difference >= 0 & p_value <= 0.05 ~ 5)) %>%
+  mutate(quad_sig_3 = 
+           case_when(scaled_difference >= 0 & lagged_difference >= 0 & p_value <= 0.1 ~ 1,
+                     scaled_difference <= 0 & lagged_difference <= 0 & p_value <= 0.1 ~ 2,
+                     scaled_difference >= 0 & lagged_difference <= 0 & p_value <= 0.1 ~ 3,
+                     scaled_difference >= 0 & lagged_difference <= 0 & p_value <= 0.1 ~ 4,
+                     scaled_difference <= 0 & lagged_difference >= 0 & p_value <= 0.1 ~ 5)) %>%
+  st_as_sf()
+
+##
+
+map_quads_1 <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = autocorrelating,
+          aes(fill = factor(quad_sig_1)), size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = 'cork', 2),
+                    name = "quadrants",
+                    labels = c("high-high", "low-low"),
+                    guide = guide_discrete,
+                    na.translate = FALSE) +
+  labs(title = "p < 0.01") +
+  theme_map()  
+
+map_quads_2 <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = autocorrelating,
+          aes(fill = factor(quad_sig_2)), size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = 'cork', 2),
+                    name = "quadrants",
+                    labels = c("high-high", "low-low"),
+                    guide = guide_discrete,
+                    na.translate = FALSE) +
+  labs(title = "p < 0.05") +
+  theme_map()  
+
+map_quads_3 <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = autocorrelating,
+          aes(fill = factor(quad_sig_3)), size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = 'cork', 2),
+                    name = "quadrants",
+                    labels = c("high-high", "low-low"),
+                    guide = guide_discrete,
+                    na.translate = FALSE) +
+  labs(title = "p < 0.1") +
+  theme_map()  
+
+p <- map_quads_1 + map_quads_2 + map_quads_3
+
+ggsave(filename = "hotspots.png", height = 6, width = 10)
 
 ##
 
