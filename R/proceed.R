@@ -1,6 +1,7 @@
 source("R/help.R")
 source("R/package.R")
 
+#################################
 ## Background
 national_ages <-
   bind_rows(read_xls("data/hackathon/aging.xls", skip = 5, sheet = 2) %>%
@@ -112,8 +113,8 @@ expectancy <-
 library(magrittr)
 library(glue)
 
-##
-
+#################################
+## Left
 names(expectancy)
 
 female <- 
@@ -192,7 +193,8 @@ tmap_mode("view")
 tm_shape(authorities) +
   tm_polygons()
 
-## Data
+#################################
+## Right
 ahah <- read_csv("data/hackathon/ahahinputs.csv")
 
 area <-   
@@ -232,6 +234,7 @@ income <-
 
 names(income) <- str_replace_all(names(income), pattern = "x", replacement = "income_")
 
+#################################
 ## Regressing
 data <- 
   expectancy %>%
@@ -252,6 +255,7 @@ left <-
   mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2) %>%
   select(code, region, lower_tier_local_authority, HLE, everything()) %>%
   filter(code != "E06000053") %>%
+  mutate_if(is.numeric, scale) %>%
   as('Spatial')
 
 ## Indexing
@@ -266,6 +270,72 @@ geogress <- gwr(HLE ~ pollution,
                 data = left, 
                 bandwidth = bandwidth)
 
+## Ridge 
+
+left <-
+  data %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2,
+         pollution = scale(no2)[, 1] + scale(pm10)[, 1] + scale(so2)[, 1],
+         income = (income_2016 - income_2006) / (income_2016 + income_2006)) %>%
+  select(code, region, lower_tier_local_authority, HLE, everything()) %>%
+  filter(code != "E06000053") %>%
+  mutate_if(is.numeric, rescale) %>%
+  as('Spatial')
+
+ridge <- 
+  gwr.lcr(HLE ~ pollution + unemployment + income + 
+            gamb_d + ffood_d + pubs2_d + green900 + 
+            ed_d + pharm_d + gpp_d + dent_d,
+          data =   left,
+          lambda.adjust = TRUE, 
+          cn.thresh = 30,
+          cv = TRUE,
+          bw = bandwidth, 
+          kernel = "gaussian")
+
+ridge %>% magrittr::use_series(SDF) %>% st_as_sf() %>% pull(residual) %>% mean()
+st_as_sf(ridge$SDF) %>% pull(Intercept) %>% mean()
+
+
+## Lasso 
+left <-
+  data %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2,
+         pollution = scale(no2)[, 1] + scale(pm10)[, 1] + scale(so2)[, 1],
+         income = (income_2016 - income_2006) / (income_2016 + income_2006)) %>%
+  select(code, region, lower_tier_local_authority, HLE, everything()) %>%
+  filter(code != "E06000053") %>%
+  mutate_if(is.numeric, rescale) %>%
+  st_drop_geometry()
+
+coords <-
+  data %>%
+  filter(code != "E06000053") %>%
+  st_transform(4326) %>%
+  st_centroid() %>%
+  st_coordinates()
+
+?gwl.est
+
+lasso <- 
+  gwl.est(HLE ~ pollution + unemployment + income + 
+            gamb_d + ffood_d + pubs2_d + tobac_d + green900 + leis_d +
+            ed_d + pharm_d + gpp_d + dent_d,
+          locs = coords, 
+          data = as.data.frame(left), 
+          cv.tol = 30,
+          kernel = "exp")
+
+mean(left$HLE - ridge$SDF$yhat)
+mean(left$HLE - lasso$yhat)
+
+t(test$beta) %>% 
+  as_tibble() %>%
+  set_names(c("intercept", "pollution", "unemployment", "income", "gamb_d", "ffood_d", "pubs2_d", "tobac_d",
+              "green900", "leis_d", 
+              "ed_d", "pharm_d", "gpp_d", "dent_d"))
+
+#################################
 ## Moransiing
 autocorrelating <- 
   expectancy %>%
