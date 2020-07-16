@@ -67,7 +67,7 @@ correlate <- function(correlations, name) {
     ggheatmap +
     geom_text(aes(Var2, Var1, label = value, colour = value), size = 3) 
   
-  ggsave(ggmatrix, filename = name, height = 10, width = 10, dpi = 300)
+  ggsave(ggmatrix, filename = name, height = 8, width = 8, dpi = 300)
   
   return(ggmatrix)
   

@@ -95,8 +95,12 @@ age_2036 <-
   coord_flip() +
   theme_pop()
 
-ggsave(age_2016, filename = "age2016.png", height = 5, width = 5, dpi = 300)
-ggsave(age_2036, filename = "age2036.png", height = 5, width = 5, dpi = 300)
+p <- age_2016 + age_2036 +  
+  plot_layout(widths = c(1, 1)) + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
+
+ggsave(p, filename = "fig1.png", height = 4, width = 8, dpi = 300)
 
 ## Data
 expectancy <- 
@@ -154,7 +158,7 @@ male <-
   use_series("r.squared") %>%
   round(2)
 
-## Figure 2
+## Figure 3
 plot <- ggplot(bind_rows(select(expectancy, 
                                 healthy_life_expectancy_for_females_2009_2013_years,
                                 life_expectancy_at_birth_for_females_2009_2013) %>%
@@ -234,6 +238,39 @@ area <-
   summarise_if(is.numeric, mean, na.rm = TRUE) %>%
   select(-seqnum)
 
+## Figure 2
+
+summary_variables <- 
+  read_sf("data/hackathon/hexgrid.shp") %>%
+  st_as_sf() %>%
+  select(code) %>%
+  left_join(area) %>%
+  st_as_sf()
+
+##
+
+map <-
+  ggplot(data = 
+           summary_variables %>%
+           filter(code %in% expectancy$code) %>%
+           transmute(`general practicioners` = gpp_d, 
+                     `hospitals` = ed_d, 
+                     `dentists` = dent_d, 
+                     `pharmacies` = pharm_d) %>%
+           gather(variable, value, `general practicioners`:`pharmacies`)) +
+  geom_sf(aes(fill = value), 
+          colour = NA, size = 0) +
+  scale_fill_scico(palette = 'lajolla', direction = 1,
+                   guide = guide_continuous,
+                   name = "distance to... (km)",
+                   limits = c(0, 10), oob = squish) +
+  facet_wrap(~ variable) +
+  theme_map()
+
+##
+
+ggsave(map, filename = "fig2.png", height = 8, width = 8, dpi = 300)
+
 ## Extra data
 rururb <- 
   read_csv("data/hackathon/rururb.csv") %>%
@@ -261,7 +298,7 @@ income <-
 names(income) <- str_replace_all(names(income), pattern = "x", replacement = "income_")
 
 #################################
-## Regressing
+## Aggregating
 data <- 
   expectancy %>%
   mutate(difference_male = life_expectancy_at_birth_for_males_2009_2013 - healthy_life_expectancy_for_males_2009_2013,
@@ -275,6 +312,35 @@ data <-
   select(code, region, everything())
 
 ##
+
+correlations <-
+  data %>%
+  mutate(difference_male = life_expectancy_at_birth_for_males_2009_2013 - healthy_life_expectancy_for_males_2009_2013,
+         difference_female = life_expectancy_at_birth_for_females_2009_2013 - healthy_life_expectancy_for_females_2009_2013_years) %>%
+  transmute(`male (diff)` = difference_male,
+            `female (diff)` = difference_female,
+            `mortality` = agestand_mortality,
+            `fast food (d)` = ffood_d,
+            `pubs (d)` = pubs2_d,
+            `GPs (d)` = gpp_d,
+            `population` = total_population_2011,
+            `density` = total_population_2011 / (area / (1000 * 1000)),
+            `income` = income_2011,
+            `rur-urban` = urban_city_and_town_population_2011 / total_population_2011,
+            `living alone` = older_people_living_alone,
+            `unemployment` = unemployment,
+            `NO2` = no2,
+            `PM10` = pm10, 
+            `parks` = green900) %>%
+  st_drop_geometry() %>%
+  drop_na()
+
+##
+
+correlate(correlations, "fig4.png")
+
+#################################
+## Regressing
 
 left <-
   data %>%
