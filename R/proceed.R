@@ -384,9 +384,7 @@ ridge <-
           bw = bandwidth, 
           kernel = "gaussian")
 
-ridge %>% magrittr::use_series(SDF) %>% st_as_sf() %>% pull(residual) %>% mean()
-st_as_sf(ridge$SDF) %>% pull(Intercept) %>% mean()
-
+ridge %>% magrittr::use_series(SDF) %>% st_as_sf() %>% pull(residual)
 
 ## Lasso 
 left <-
@@ -607,7 +605,7 @@ map_quads_1 <-
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
-  labs(title = "p < 0.01") +
+  labs(subtitle = "p < 0.01") +
   theme_map()  
 
 map_quads_2 <- 
@@ -621,7 +619,7 @@ map_quads_2 <-
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
-  labs(title = "p < 0.05") +
+  labs(subtitle = "p < 0.05") +
   theme_map()  
 
 map_quads_3 <- 
@@ -635,12 +633,16 @@ map_quads_3 <-
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
-  labs(title = "p < 0.1") +
+  labs(subtitle = "p < 0.1") +
   theme_map()  
 
 p <- map_quads_1 + map_quads_2 + map_quads_3
+p <- p +   
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
 
-ggsave(filename = "hotspots.png", height = 6, width = 10)
+ggsave(filename = "fig5.png", height = 6, width = 10)
 
 ##
 

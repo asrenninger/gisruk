@@ -112,7 +112,7 @@ theme_map <- function () {
           plot.subtitle =  element_text(face = 'plain', colour = 'black', size = 15),
           plot.caption = element_text(face = 'bold', colour = 'black'),
           strip.text = element_text(face = 'bold', colour = 'black'),
-          legend.title = element_text(face = 'bold', colour = 'grey50', angle = 0),
+          legend.title = element_text(face = 'bold', colour = 'black', angle = 0),
           legend.text = element_text(colour = 'black', angle = 0),
           legend.position = 'bottom',
           plot.margin = margin(5, 5, 5, 5)
