@@ -216,13 +216,12 @@ guide_discrete <-
                byrow = TRUE)
 
 guide_continuous <- 
-  guide_colorbar(direction = "vertical",
-                 barheight = unit(50, units = "mm"),
-                 barwidth = unit(2, units = "mm"),
+  guide_colorbar(direction = "horizontal",
+                 barheight = unit(2, units = "mm"),
+                 barwidth = unit(50, units = "mm"),
                  draw.ulim = FALSE,
-                 title.position = 'right',
-                 label.position = 'left',
+                 title.position = 'top',
+                 label.position = 'bottom',
                  title.hjust = 0.5,
                  label.hjust = 0.5)
-
 

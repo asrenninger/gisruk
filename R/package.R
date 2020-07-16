@@ -14,7 +14,9 @@ library(tmap)
 library(tmaptools)
 
 library(scico)
+library(patchwork)
 library(scales)
+
 
 library(spdep)
 library(spgwr)

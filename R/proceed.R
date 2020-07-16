@@ -40,8 +40,7 @@ groups <-
   group_by(age_group) %>%
   slice(1)
 
-##
-
+## Figure 1
 national_aging <- 
   ggplot(national_ages %>%
            left_join(groups) %>%
@@ -77,9 +76,7 @@ age_2016 <-
   scale_fill_manual(values = c(scico(palette = "grayC", 10)[3], scico(palette = "grayC", 10)[10])) +
   scale_y_continuous(labels = abs, limits = max(national_ages$population, na.rm = TRUE) * c(-1, 1)) +
   scale_x_continuous(labels = c("", "", ""), breaks = c(25, 50, 75), limits = c(-1, 100)) +
-  labs(title = "national projections {closest_state}",
-       subtitle = "PROJECTED POPULATION BY AGE",
-       x = "age bracket", y = "population") +
+  labs(x = "age bracket", y = "population") +
   coord_flip() +
   theme_pop()
 
@@ -94,9 +91,7 @@ age_2036 <-
   scale_fill_manual(values = c(scico(palette = "grayC", 10)[3], scico(palette = "grayC", 10)[10])) +
   scale_y_continuous(labels = abs, limits = max(national_ages$population, na.rm = TRUE) * c(-1, 1)) +
   scale_x_continuous(labels = c("", "", ""), breaks = c(25, 50, 75), limits = c(-1, 100)) +
-  labs(title = "national projections {closest_state}",
-       subtitle = "PROJECTED POPULATION BY AGE",
-       x = "age bracket", y = "population") +
+  labs(x = "age bracket", y = "population") +
   coord_flip() +
   theme_pop()
 
@@ -107,63 +102,6 @@ ggsave(age_2036, filename = "age2036.png", height = 5, width = 5, dpi = 300)
 expectancy <- 
   read_xls("data/hackathon/healthy.xls", skip = 10, sheet = 1) %>%
   clean_names()
-
-##
-
-library(magrittr)
-library(glue)
-
-#################################
-## Left
-names(expectancy)
-
-female <- 
-  lm(healthy_life_expectancy_for_females_2009_2013_years ~ life_expectancy_at_birth_for_females_2009_2013, 
-   data = expectancy) %>%
-  summary() %>%
-  use_series("r.squared") %>%
-  round(2)
-
-male <- 
-  lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_males_2009_2013, 
-     data = expectancy) %>%
-  summary() %>%
-  use_series("r.squared") %>%
-  round(2)
-
-## Figure 1
-ggplot(bind_rows(select(expectancy, 
-                        healthy_life_expectancy_for_females_2009_2013_years,
-                        life_expectancy_at_birth_for_females_2009_2013) %>%
-                   set_names(c("in good health", "at birth")) %>%
-                   mutate(class = "female"),
-                 select(expectancy, healthy_life_expectancy_for_males_2009_2013,
-                        life_expectancy_at_birth_for_males_2009_2013) %>%
-                   set_names(c("in good health", "at birth")) %>%
-                   mutate(class = "male")), 
-       aes(x = `at birth`, y = `in good health`, colour = class)) +
-  geom_point(alpha = 0.5, show.legend = FALSE) +
-  geom_smooth(method = lm, se = FALSE, fullrange = TRUE, 
-              linetype = 2, show.legend = FALSE) +
-  geom_text(aes(x = 75, y = 70, label = glue("r-squared = {male}")), hjust = 0) +
-  geom_text(aes(x = 80, y = 50, label = glue("r-squared = {female}")), hjust = 0) +
-  scale_colour_manual(values = c(scico(palette = "grayC", 10)[3], 
-                                 scico(palette = "grayC", 10)[10])) +
-  labs(title = "local authorities",
-       subtitle = "TWIN LIFE EXPECTANCIES") +
-  theme_ver()
-
-##
-
-lm(healthy_life_expectancy_for_females_2009_2013_years ~ life_expectancy_at_birth_for_females_2009_2013, 
-   data = expectancy) %>%
-  summary() %>%
-  use_series("coef")
-
-lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_males_2009_2013, 
-     data = expectancy) %>%
-  summary() %>%
-  use_series("coef")
 
 ## Spatial data
 authorities <-
@@ -192,6 +130,94 @@ tmap_mode("view")
 
 tm_shape(authorities) +
   tm_polygons()
+
+##
+
+library(magrittr)
+library(glue)
+
+#################################
+## Left
+names(expectancy)
+
+female <- 
+  lm(healthy_life_expectancy_for_females_2009_2013_years ~ life_expectancy_at_birth_for_females_2009_2013, 
+   data = expectancy) %>%
+  summary() %>%
+  use_series("r.squared") %>%
+  round(2)
+
+male <- 
+  lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_males_2009_2013, 
+     data = expectancy) %>%
+  summary() %>%
+  use_series("r.squared") %>%
+  round(2)
+
+## Figure 2
+plot <- ggplot(bind_rows(select(expectancy, 
+                                healthy_life_expectancy_for_females_2009_2013_years,
+                                life_expectancy_at_birth_for_females_2009_2013) %>%
+                           set_names(c("in good health", "at birth")) %>%
+                           mutate(class = "female"),
+                         select(expectancy, healthy_life_expectancy_for_males_2009_2013,
+                                life_expectancy_at_birth_for_males_2009_2013) %>%
+                           set_names(c("in good health", "at birth")) %>%
+                           mutate(class = "male")), 
+               aes(x = `at birth`, y = `in good health`, colour = class)) +
+  geom_point(alpha = 0.5, show.legend = FALSE) +
+  geom_smooth(method = lm, se = FALSE, fullrange = TRUE, 
+              linetype = 2, show.legend = FALSE) +
+  geom_text(aes(x = 75, y = 80, label = glue("r-squared = {male}")), hjust = 0) +
+  geom_text(aes(x = 80, y = 50, label = glue("r-squared = {female}")), hjust = 0) +
+  scale_colour_manual(values = c(scico(palette = "grayC", 10)[3], 
+                                 scico(palette = "grayC", 10)[10])) +
+  theme_ver() +
+  theme(legend.position = 'bottom')
+
+##
+
+map <- ggplot(data =
+                expectancy %>%
+                left_join(authorities) %>%
+                drop_na() %>%
+                st_as_sf() %>%
+                select(healthy_life_expectancy_for_females_2009_2013_years,
+                       healthy_life_expectancy_for_males_2009_2013) %>%
+                gather(variable, value, healthy_life_expectancy_for_females_2009_2013_years:healthy_life_expectancy_for_males_2009_2013) %>%
+                mutate(name = case_when(variable == "healthy_life_expectancy_for_males_2009_2013" ~ "male",
+                                        variable == "healthy_life_expectancy_for_females_2009_2013_years" ~ "female")) %>%
+                select(variable, name, value, geometry)) +
+  geom_sf(data = background,
+          aes(), 
+          fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(aes(fill = value), 
+          colour = NA, size = 0) +
+  scale_fill_scico(palette = 'lajolla', direction = -1,
+                   guide = guide_continuous) +
+  facet_wrap(~ name) +
+  theme_map()
+
+##
+
+p <- plot + map +  
+  plot_layout(widths = c(1, 2)) + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
+
+ggsave(p, filename = "fig2.png", height = 4, width = 8, dpi = 300)
+
+##
+
+lm(healthy_life_expectancy_for_females_2009_2013_years ~ life_expectancy_at_birth_for_females_2009_2013, 
+   data = expectancy) %>%
+  summary() %>%
+  use_series("coef")
+
+lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_males_2009_2013, 
+     data = expectancy) %>%
+  summary() %>%
+  use_series("coef")
 
 #################################
 ## Right
@@ -271,7 +297,6 @@ geogress <- gwr(HLE ~ pollution,
                 bandwidth = bandwidth)
 
 ## Ridge 
-
 left <-
   data %>%
   mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2,
@@ -284,7 +309,7 @@ left <-
 
 ridge <- 
   gwr.lcr(HLE ~ pollution + unemployment + income + 
-            gamb_d + ffood_d + pubs2_d + green900 + 
+            gamb_d + ffood_d + pubs2_d + tobac_d + green900 + leis_d +
             ed_d + pharm_d + gpp_d + dent_d,
           data =   left,
           lambda.adjust = TRUE, 
@@ -315,8 +340,6 @@ coords <-
   st_centroid() %>%
   st_coordinates()
 
-?gwl.est
-
 lasso <- 
   gwl.est(HLE ~ pollution + unemployment + income + 
             gamb_d + ffood_d + pubs2_d + tobac_d + green900 + leis_d +
@@ -326,14 +349,47 @@ lasso <-
           cv.tol = 30,
           kernel = "exp")
 
+real <- ridge$SDF %>% st_as_sf() %>% filter(y != 0) %>% pull(y)
+pred <- ridge$SDF %>% st_as_sf() %>% filter(y != 0) %>% pull(yhat)
+
+rmspe_ridge <- MLmetrics::RMSPE(pred, real)
+
+real <- 
+  left %>%
+  mutate(yhat = lasso$yhat) %>%
+  filter(HLE != 0) %>%
+  pull(HLE)
+
+pred <- 
+  left %>%
+  mutate(yhat = lasso$yhat) %>%
+  filter(HLE != 0) %>%
+  pull(yhat)
+
+rmspe_lasso <- MLmetrics::RMSPE(pred, real)
+
 mean(left$HLE - ridge$SDF$yhat)
 mean(left$HLE - lasso$yhat)
 
-t(test$beta) %>% 
+gwrr:::gwl.est
+gwrr:::gwl.beta
+
+t(lasso$beta) %>% 
   as_tibble() %>%
   set_names(c("intercept", "pollution", "unemployment", "income", "gamb_d", "ffood_d", "pubs2_d", "tobac_d",
               "green900", "leis_d", 
-              "ed_d", "pharm_d", "gpp_d", "dent_d"))
+              "ed_d", "pharm_d", "gpp_d", "dent_d")) %>%
+  select(2:14) %>%
+  summarise_all(mean)
+
+ridge$SDF %>%
+  as_tibble() %>%
+  select(2:14) %>%
+  summarise_all(mean)
+
+ridge$SDF %>% st_as_sf() %>% select(yhat, residual) %>% plot()
+ridge$SDF%>% st_as_sf() %>% transmute(yhat = lasso$yhat,
+                                      residual = y - yhat) %>% plot()
 
 #################################
 ## Moransiing
@@ -522,6 +578,11 @@ ggsave(filename = "hotspots.png", height = 6, width = 10)
 
 ##
 
+tm_shape(autocorrelating) +
+  tm_fill(col = "quad_sig_3", alpha = 0.5)
+
+##
+
 box <- 
   st_transform(background, 27700) %>% 
   st_bbox() %>%
@@ -537,7 +598,7 @@ plot(box)
 
 ##
 
-
+?gwl.est
 
 
 
