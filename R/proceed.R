@@ -830,29 +830,3 @@ ggsave(filename = "fig5.png", height = 6, width = 10)
 
 tm_shape(autocorrelating) +
   tm_fill(col = "quad_sig_3", alpha = 0.5)
-
-##
-
-box <- 
-  st_transform(background, 27700) %>% 
-  st_bbox() %>%
-  st_as_sfc() %>%
-  st_make_grid(cellsize = 50000) %>%
-  st_as_sf() %>%
-  rownames_to_column() %>% 
-  mutate(rowname = as.numeric(rowname))
-
-##
-
-plot(box)
-
-##
-
-?gwl.est
-
-
-
-
-
-
-

@@ -15,6 +15,7 @@ library(tmaptools)
 
 library(scico)
 library(patchwork)
+library(gganimate)
 library(scales)
 
 
