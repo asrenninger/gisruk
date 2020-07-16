@@ -209,7 +209,7 @@ p <- plot + map +
   plot_annotation(tag_levels = 'A') & 
   theme(plot.tag = element_text(size = 8))
 
-ggsave(p, filename = "fig2.png", height = 4, width = 8, dpi = 300)
+ggsave(p, filename = "fig3.png", height = 4, width = 8, dpi = 300)
 
 ##
 
@@ -351,7 +351,7 @@ left <-
   as('Spatial')
 
 ## Indexing
-left$pollution <- scale(left$no2) + scale(left$pm10) + scale(left$so2)
+left$pollution <- scale(left$no2)[, 1] + scale(left$pm10)[, 1] + scale(left$so2)[, 1]
 
 ##
 
@@ -361,6 +361,110 @@ bandwidth <- gwr.sel(HLE ~ pollution,
 geogress <- gwr(HLE ~ pollution, 
                 data = left, 
                 bandwidth = bandwidth)
+
+## Figure 6
+results <- read_csv("data/hackathon/gwrresults.csv")
+
+dim(results)
+dim(data)
+
+shape <- 
+  data %>%
+  filter(code != "E06000053") %>%
+  select(code, geometry)
+
+results_shape <-
+  results %>%
+  bind_cols(shape) %>%
+  st_as_sf() %>%
+  clean_names()
+
+##
+
+map_deprivation <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = results_shape,
+          aes(fill = factor(ntile(depriv_coef, 5))), size = 0.01, colour = 'gray70') +
+  scale_fill_manual(values = scico(palette = 'oslo', 5),
+                    labels = str_sub(as.character(quantile(results_shape$depriv_coef,
+                                                           c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
+                    name = "coefficent",
+                    guide = guide_discrete) +
+  labs(caption = "deprivation") +
+  theme_map() +
+  theme(plot.margin = margin(5, 30, 5, 30))
+
+map_air <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = results_shape,
+          aes(fill = factor(ntile(airpol_coef, 5))), size = 0.01, colour = 'gray70') +
+  scale_fill_manual(values = scico(palette = 'oslo', 5),
+                    labels = str_sub(as.character(quantile(results_shape$airpol_coef,
+                                                           c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
+                    name = "coefficent",
+                    guide = guide_discrete) +
+  labs(caption = "air pollution") +
+  theme_map() +
+  theme(plot.margin = margin(5, 30, 5, 30))
+
+map_lifestyle <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = results_shape,
+          aes(fill = factor(ntile(lifest_coef, 5))), size = 0.01, colour = 'gray70') +
+  scale_fill_manual(values = scico(palette = 'oslo', 5, direction = -1),
+                    labels = str_sub(as.character(quantile(results_shape$lifest_coef,
+                                                           c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
+                    name = "coefficent",
+                    guide = guide_discrete) +
+  labs(caption = "lifestyle distances") +
+  theme_map() +
+  theme(plot.margin = margin(5, 30, 5, 30))
+
+map_unemployment <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = results_shape,
+          aes(fill = factor(ntile(unempl_coef, 5))), size = 0.01, colour = 'gray70') +
+  scale_fill_manual(values = scico(palette = 'oslo', 5),
+                    labels = str_sub(as.character(quantile(results_shape$unempl_coef,
+                                                           c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
+                    name = "coefficent",
+                    guide = guide_discrete) +
+  labs(caption = "unemployment") +
+  theme_map() +
+  theme(plot.margin = margin(5, 30, 5, 30))
+
+map_health <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = results_shape,
+          aes(fill = factor(ntile(hlthserv_coef, 5))), size = 0.01, colour = 'gray70') +
+  scale_fill_manual(values = scico(palette = 'oslo', 5),
+                    labels = str_sub(as.character(quantile(results_shape$hlthserv_coef,
+                                                           c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
+                    name = "coefficent",
+                    guide = guide_discrete) +
+  labs(caption = "health services") +
+  theme_map() +
+  theme(plot.margin = margin(5, 30, 5, 30))
+
+##
+
+p <- (map_lifestyle + map_health) / (map_unemployment + map_deprivation)
+p <- p +   
+  theme(plot.margin = margin(20, 20, 20, 20)) +
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
+
+ggsave(p, filename = "fig6.png", height = 8, width = 8, dpi = 300)
 
 ## Ridge 
 left <-
@@ -454,6 +558,84 @@ ridge$SDF %>%
 ridge$SDF %>% st_as_sf() %>% select(yhat, residual) %>% plot()
 ridge$SDF%>% st_as_sf() %>% transmute(yhat = lasso$yhat,
                                       residual = y - yhat) %>% plot()
+
+## Figure 7
+longform <- 
+  data %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2) %>%
+  select(code, region, lower_tier_local_authority, HLE) %>%
+  filter(code != "E06000053") %>%
+  st_as_sf() %>%
+  bind_cols(results) %>%
+  clean_names() %>%
+  select(code, region, lower_tier_local_authority, hle, 
+         airpol_coef, depriv_coef, lifest_coef, unempl_coef, hlthserv_coef) %>%
+  mutate(lifest_coef = lifest_coef * -1) %>%
+  gather(variable, value, airpol_coef:hlthserv_coef) %>%
+  group_by(variable) %>%
+  mutate(scaled = scale(value)) %>%
+  mutate(tile = ntile(scaled, 10)) %>%
+  ungroup()
+
+unique(longform$variable)
+
+map_layers <- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'transparent', colour = '#000000', size = 0.25) +
+  geom_sf(data = filter(longform, variable == "airpol_coef"),
+          aes(fill = factor(tile)), alpha = 0.2, size = 0, colour = NA) +
+  geom_sf(data = filter(longform, variable == "depriv_coef"),
+          aes(fill = factor(tile)), alpha = 0.2, size = 0, colour = NA) +
+  geom_sf(data = filter(longform, variable == "hlthserv_coef"),
+          aes(fill = factor(tile)), alpha = 0.2, size = 0, colour = NA) +
+  geom_sf(data = filter(longform, variable == "lifest_coef"),
+          aes(fill = factor(tile)), alpha = 0.2, size = 0, colour = NA) +
+  geom_sf(data = filter(longform, variable == "unempl_coef"),
+          aes(fill = factor(tile)), alpha = 0.2, size = 0, colour = NA) +
+  scale_fill_manual(values = scico(palette = "grayC", 10),
+                    guide = 'none') +
+  theme_map()
+
+ggsave(map_layers, filename = "layers.png", height = 8, width = 8, dpi = 300)
+
+##
+
+pal <- scico(10, palette = 'acton')
+
+##
+
+plot_regions <-
+  data %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2) %>%
+  filter(code != "E06000053") %>%
+  st_as_sf() %>%
+  st_drop_geometry() %>%
+  bind_cols(results) %>%
+  clean_names() %>%
+  select(code, region, lower_tier_local_authority, hle, 
+         airpol_coef, depriv_coef, lifest_coef, unempl_coef, hlthserv_coef) %>%
+  mutate(lifest_coef = lifest_coef * -1) %>%
+  gather(variable, value, airpol_coef:hlthserv_coef) %>%
+  group_by(variable, region) %>%
+  mutate(scaled = scale(value)) %>%
+  summarise(m = mean(scaled)) %>%
+  ggplot(aes(x = m, y = reorder(region, m))) +
+  geom_line(aes(group = region), colour = '#848484', size = 0.5) +
+  geom_point(aes(colour = variable), shape = '|', size = 5) +
+  scale_colour_manual(values = c(pal[1], pal[3], pal[5], pal[7], pal[9]),
+                      labels = c("pollution", "deprivation", "services", "lifestyle", "unemployment")) +
+  scale_x_continuous(breaks = c(0)) +
+  labs(x = "mean coefficient z-score", y = "") +
+  theme_ver() 
+
+p <- map_layers + plot_regions 
+p <- p +
+  plot_layout(widths = c(1, 1)) + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
+
+ggsave(p, filename = "fig7.png", height = 4, width = 8, dpi = 300)
 
 #################################
 ## Moransiing
@@ -605,7 +787,7 @@ map_quads_1 <-
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
-  labs(subtitle = "p < 0.01") +
+  labs(caption = "p < 0.01") +
   theme_map()  
 
 map_quads_2 <- 
@@ -619,7 +801,7 @@ map_quads_2 <-
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
-  labs(subtitle = "p < 0.05") +
+  labs(caption = "p < 0.05") +
   theme_map()  
 
 map_quads_3 <- 
@@ -633,7 +815,7 @@ map_quads_3 <-
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
-  labs(subtitle = "p < 0.1") +
+  labs(caption = "p < 0.1") +
   theme_map()  
 
 p <- map_quads_1 + map_quads_2 + map_quads_3
