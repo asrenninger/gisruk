@@ -100,3 +100,5 @@ windows <-
   theme_map()
 
 anim_save(windows, filename = "windows.gif", fps = 3)
+
+?purrr::accumulate()
