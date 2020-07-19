@@ -173,6 +173,23 @@ windows <-
 
 anim_save(windows, filename = "gwr.gif", fps = 3)
 
+names(final)
+
+models <- 
+  ggplot(final %>%
+           mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2),
+         aes(x = index_of_multiple_deprivation_imd_score_2015, y = HLE)) +
+  geom_point(aes(colour = score), show.legend = FALSE) +
+  geom_smooth(method = lm, fullrange = TRUE, colour = 'grey') +
+  scale_colour_scico(palette = 'buda', direction = -1) +
+  xlab("English Index of Multiple Deprivation") +
+  ylab("Healthy Life Expectancy") +
+  transition_manual(id) +
+  ease_aes('linear') +
+  theme_ver()
+
+anim_save(models, filename = "models.gif", fps = 3)
+
 
 
 
