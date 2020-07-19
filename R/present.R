@@ -94,7 +94,7 @@ windows <-
           aes(), 
           fill = NA, colour = '#000000', alpha = 0.1, size = 0.5) +
   geom_sf(aes(fill = score), show.legend = FALSE) +
-  scale_fill_scico(palette = 'buda', direction = -1) +
+  scale_fill_scico(palette = 'buda', direction = 1) +
   transition_manual(id) +
   ease_aes('linear') +
   theme_map()
@@ -278,3 +278,63 @@ models <-
 
 anim_save(models, filename = "models_larger.gif", fps = 3)
 
+##
+
+left <-
+  data %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2,
+         pollution = scale(no2)[, 1] + scale(pm10)[, 1] + scale(so2)[, 1],
+         income = (income_2016 - income_2006) / (income_2016 + income_2006)) %>%
+  select(code, region, lower_tier_local_authority, HLE, everything()) %>%
+  filter(code != "E06000053") %>%
+  mutate_if(is.numeric, rescale)
+
+
+vars <- str_split("pollution + unemployment + income + gamb_d + ffood_d + pubs2_d + tobac_d + green900 + leis_d + ed_d + pharm_d + gpp_d + dent_d",
+                  " \\+ ")
+
+y <- left$HLE
+x <- 
+  left %>%
+  st_drop_geometry() %>%
+  select(vars[[1]]) %>%
+  as.matrix()
+
+##
+
+library(glmnet)
+
+##
+
+ids <- 
+  final %>% 
+  pull(id) %>% 
+  unique()
+
+length(unique(test$code))
+
+spatial <- 
+  final %>%
+  select(code, id, rowname) %>% 
+  st_drop_geometry() %>%
+  left_join(left) %>%
+  st_as_sf() %>%
+  select(HLE, id, vars[[1]]) 
+
+regress <- st_drop_geometry(spatial)
+  
+lambda <- c()
+
+for (i in 1:length(ids)) {
+  df <- filter(regress, id == i)
+  y <- df$HLE
+  x <- as.matrix(df[, 3:ncol(df)])
+  
+  try(fit <- cv.glmnet(x, y, alpha = 0, type.measure = "mse", nfolds = 20))
+  iteration <- glue("{i} : {fit$lambda.min}")
+  print(iteration)
+  lambda <- c(lambda, fit$lambda.min)
+  
+}
+
+pred <- predict(fit, newx = x, s = "lambda.min")
