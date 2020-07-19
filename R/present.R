@@ -1,5 +1,5 @@
-source("R/help.R")
 source("R/package.R")
+source("R/help.R")
 
 #################################
 ## Spatial data
@@ -72,7 +72,7 @@ final <-
   st_centroid() %>%
   st_coordinates() %>%
   as_tibble() %>%
-  bind_cols(test) %>%
+  bind_cols(scnd_degree) %>%
   st_as_sf() %>%
   st_drop_geometry() %>%
   group_by(id) %>%
@@ -101,4 +101,78 @@ windows <-
 
 anim_save(windows, filename = "windows.gif", fps = 3)
 
-?purrr::accumulate()
+##
+
+expectancy <- 
+  read_xls("data/hackathon/healthy.xls", skip = 10, sheet = 1) %>%
+  clean_names()
+
+play <- 
+  expectancy %>%
+  left_join(authorities) %>%
+  filter(code != "E06000053") %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.numeric(rowname)) %>%
+  st_as_sf() 
+ 
+
+frst_degree <- 
+  play %>% 
+  st_touches() %>% 
+  as_tibble() %>% 
+  clean_names()
+
+scnd_degree <- 
+  frst_degree %>%
+  rename(id = row_id,
+         row_id = col_id) %>%
+  left_join(frst_degree) %>%
+  transmute(id = id,
+            rowname = col_id) %>%
+  group_by(id) %>%
+  distinct(rowname, .keep_all = TRUE) %>%
+  ungroup() %>%
+  left_join(play) %>%
+  st_as_sf()
+
+geom <- st_geometry(scnd_degree)
+
+final <- 
+  scnd_degree %>%
+  st_centroid() %>%
+  st_coordinates() %>%
+  as_tibble() %>%
+  bind_cols(scnd_degree) %>%
+  st_as_sf() %>%
+  st_drop_geometry() %>%
+  group_by(id) %>%
+  mutate(x = abs(X - mean(X)),
+         y = abs(Y - mean(Y))) %>%
+  mutate(score = (x + y) / 2) %>%
+  ungroup() %>% 
+  mutate(geometry = geom) %>%
+  st_as_sf()
+
+##
+
+background <- 
+  authorities %>%
+  st_union() %>%
+  st_combine()
+
+windows <- 
+  ggplot(final) +
+  geom_sf(data = background,
+          aes(), 
+          fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(aes(fill = score), show.legend = FALSE) +
+  scale_fill_scico(palette = 'buda', direction = -1) +
+  transition_manual(id) +
+  ease_aes('linear') +
+  theme_map()
+
+anim_save(windows, filename = "gwr.gif", fps = 3)
+
+
+
+
