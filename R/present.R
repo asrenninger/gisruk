@@ -325,16 +325,92 @@ regress <- st_drop_geometry(spatial)
   
 lambda <- c()
 
+ranks <- tibble()
+
+vimp <- function(object, lambda = NULL, ...) {
+  
+  beta <- predict(object, s = lambda, type = "coef")
+  if(is.list(beta)) {
+    out <- do.call("cbind", lapply(beta, function(x) x[,1]))
+    out <- as.data.frame(out)
+  } else out <- data.frame(Overall = beta[,1])
+  out <- abs(out[rownames(out) != "(Intercept)",,drop = FALSE])
+  out
+}
+
+
 for (i in 1:length(ids)) {
   df <- filter(regress, id == i)
   y <- df$HLE
   x <- as.matrix(df[, 3:ncol(df)])
   
-  try(fit <- cv.glmnet(x, y, alpha = 0, type.measure = "mse", nfolds = 20))
+  try(fit <- cv.glmnet(x, y, alpha = 1, type.measure = "mse", nfolds = 20))
   iteration <- glue("{i} : {fit$lambda.min}")
   print(iteration)
   lambda <- c(lambda, fit$lambda.min)
   
+  imp <- vimp(fit, lambda = fit$lambda.min)
+  
+  ranks <- 
+    imp %>% 
+    rownames_to_column() %>% 
+    as_tibble() %>% 
+    rename(variable = rowname) %>%
+    mutate(iteration = i) %>%
+    bind_rows(ranks)
+  
 }
 
-pred <- predict(fit, newx = x, s = "lambda.min")
+pred <- predict(fit, s = "lambda.min", type = 'coef')
+
+betas <- 
+  ranks %>%
+  clean_names() %>%
+  pivot_wider(names_from = variable, values_from = overall)
+
+ranks %>%
+  clean_names() %>%
+  filter(overall == 0) %>%
+  group_by(variable) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+
+ggplot(ranks %>% 
+         clean_names() %>%
+         group_by(variable) %>%
+         summarise(n = n(),
+                   m = mean(overall)) %>%
+         ungroup() %>%
+         rename(var = variable) %>%
+         mutate(var = str_replace_all(var, pattern = "_d", replacement = " (d)"),
+                var = str_remove(var, "900"),
+                var = str_replace(var, pattern = "ffood", replacement = "fast food"),
+                var = str_replace(var, pattern = "pubs2", replacement = "pubs")),
+       aes(x = reorder(var, m), y = m)) +
+  geom_point(colour = scico(palette = 'buda', 10)[1]) +
+  geom_segment(aes(xend = reorder(var, m), yend = 0), colour = scico(palette = 'buda', 10)[1]) +
+  xlab("") +
+  ylab("importance") +
+  coord_flip() + 
+  theme_rot() +
+  ggsave('ranks.png')
+
+play %>%
+  filter(code != "E06000046") %>%
+  mutate(lambdas = lambda) %>%
+  select(lambdas) %>%
+  ggplot() +
+  geom_sf(data = background,
+          aes(), 
+          fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(aes(fill = lambdas), show.legend = FALSE) +
+  scale_fill_scico(palette = 'buda') + 
+  theme_map() +
+  ggsave("lambdas.png")
+
+##
+
+
+
+
+
