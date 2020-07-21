@@ -3,6 +3,7 @@ source("R/package.R")
 
 #################################
 ## Background
+
 national_ages <-
   bind_rows(read_xls("data/hackathon/aging.xls", skip = 5, sheet = 2) %>%
               clean_names() %>%
@@ -142,6 +143,7 @@ library(glue)
 
 #################################
 ## Left
+
 names(expectancy)
 
 female <- 
@@ -225,6 +227,7 @@ lm(healthy_life_expectancy_for_males_2009_2013 ~ life_expectancy_at_birth_for_ma
 
 #################################
 ## Right
+
 ahah <- read_csv("data/hackathon/ahahinputs.csv")
 
 area <-   
@@ -272,6 +275,7 @@ map <-
 ggsave(map, filename = "fig2.png", height = 8, width = 8, dpi = 300)
 
 ## Extra data
+
 rururb <- 
   read_csv("data/hackathon/rururb.csv") %>%
   clean_names() %>%
@@ -299,6 +303,7 @@ names(income) <- str_replace_all(names(income), pattern = "x", replacement = "in
 
 #################################
 ## Aggregating
+
 data <- 
   expectancy %>%
   mutate(difference_male = life_expectancy_at_birth_for_males_2009_2013 - healthy_life_expectancy_for_males_2009_2013,
@@ -344,7 +349,8 @@ correlate(correlations, "fig4.png")
 
 left <-
   data %>%
-  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2) %>%
+  mutate(HLE = (healthy_life_expectancy_for_females_2009_2013_years + healthy_life_expectancy_for_males_2009_2013) / 2,
+         income = (income_2016 - income_2006) / (income_2016 + income_2006)) %>%
   select(code, region, lower_tier_local_authority, HLE, everything()) %>%
   filter(code != "E06000053") %>%
   mutate_if(is.numeric, scale) %>%
@@ -352,15 +358,35 @@ left <-
 
 ## Indexing
 left$pollution <- scale(left$no2)[, 1] + scale(left$pm10)[, 1] + scale(left$so2)[, 1]
+left$lifestyle <- scale(left$pubs2_d)[, 1] + scale(left$gamb_d)[, 1] + scale(left$ffood_d)[, 1]
+left$care <- scale(left$gpp_d)[, 1] + scale(left$dent_d)[, 1]
 
 ##
 
-bandwidth <- gwr.sel(HLE ~ pollution, 
+bandwidth <- gwr.sel(HLE ~ unemployment, 
                      data = left)
 
-geogress <- gwr(HLE ~ pollution, 
+geogress <- gwr(HLE ~ unemployment, 
                 data = left, 
                 bandwidth = bandwidth)
+
+geogress <- st_as_sf(geogress$SDF)
+
+map_income<- 
+  ggplot() + 
+  geom_sf(data = background,
+          aes(), fill = 'grey70', colour = NA, size = 0) +
+  geom_sf(data = geogress,
+          aes(fill = factor(ntile(unemployment, 5))), size = 0.01, colour = 'gray70') +
+  scale_fill_manual(values = scico(palette = 'buda', 5, direction = -1),
+                    labels = str_sub(as.character(quantile(geogress$unemployment,
+                                                           c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
+                    name = "coefficent",
+                    guide = guide_discrete) +
+  labs(caption = "unemployment (d)") +
+  theme_map() +
+  theme(plot.margin = margin(5, 30, 5, 30)) +
+  ggsave("unemployment.png")
 
 ## Figure 6
 results <- read_csv("data/hackathon/gwrresults.csv")
@@ -376,8 +402,8 @@ shape <-
 results_shape <-
   results %>%
   bind_cols(shape) %>%
-  st_as_sf() %>%
-  clean_names()
+  clean_names() %>%
+  st_as_sf() 
 
 ##
 
@@ -475,6 +501,7 @@ left <-
   select(code, region, lower_tier_local_authority, HLE, everything()) %>%
   filter(code != "E06000053") %>%
   mutate_if(is.numeric, rescale) %>%
+  glimpse() %>%
   as('Spatial')
 
 ridge <- 
@@ -487,8 +514,6 @@ ridge <-
           cv = TRUE,
           bw = bandwidth, 
           kernel = "gaussian")
-
-ridge %>% magrittr::use_series(SDF) %>% st_as_sf() %>% pull(residual)
 
 ## Lasso 
 left <-
@@ -639,6 +664,7 @@ ggsave(p, filename = "fig7.png", height = 4, width = 8, dpi = 300)
 
 #################################
 ## Moransiing
+
 autocorrelating <- 
   expectancy %>%
   mutate(difference_male = life_expectancy_at_birth_for_males_2009_2013 - healthy_life_expectancy_for_males_2009_2013,
