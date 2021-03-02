@@ -564,9 +564,6 @@ rmspe_lasso <- MLmetrics::RMSPE(pred, real)
 mean(left$HLE - ridge$SDF$yhat)
 mean(left$HLE - lasso$yhat)
 
-gwrr:::gwl.est
-gwrr:::gwl.beta
-
 t(lasso$beta) %>% 
   as_tibble() %>%
   set_names(c("intercept", "pollution", "unemployment", "income", "gamb_d", "ffood_d", "pubs2_d", "tobac_d",

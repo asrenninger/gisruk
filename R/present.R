@@ -125,11 +125,10 @@ play <-
   select(-X, -Y) %>%
   st_as_sf() 
  
-
 frst_degree <- 
   play %>% 
   st_touches() %>% 
-  as_tibble() %>% 
+  as.data.frame() %>% 
   clean_names()
 
 scnd_degree <- 
@@ -312,8 +311,6 @@ ids <-
   pull(id) %>% 
   unique()
 
-length(unique(test$code))
-
 spatial <- 
   final %>%
   select(code, id, rowname) %>% 
@@ -418,7 +415,7 @@ map_quads_1 <-
   geom_sf(data = autocorrelating,
           aes(fill = factor(quad_sig_1)), size = 0, colour = NA) +
   scale_fill_manual(values = scico(palette = 'buda', 2, direction = -1),
-                    name = "quadrants",
+                    name = "lifespan - healthspan",
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
@@ -432,7 +429,7 @@ map_quads_2 <-
   geom_sf(data = autocorrelating,
           aes(fill = factor(quad_sig_2)), size = 0, colour = NA) +
   scale_fill_manual(values = scico(palette = 'buda', 2, direction = -1),
-                    name = "quadrants",
+                    name = "lifespan - healthspan",
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
@@ -446,7 +443,7 @@ map_quads_3 <-
   geom_sf(data = autocorrelating,
           aes(fill = factor(quad_sig_3)), size = 0, colour = NA) +
   scale_fill_manual(values = scico(palette = 'buda', 2, direction = -1),
-                    name = "quadrants",
+                    name = "lifespan - healthspan",
                     labels = c("high-high", "low-low"),
                     guide = guide_discrete,
                     na.translate = FALSE) +
@@ -469,10 +466,12 @@ left <-
   mutate_if(is.numeric, scale) %>%
   as('Spatial')
 
-bandwidth <- gwr.sel(HLE ~ income_1998, 
+names(data)
+
+bandwidth <- gwr.sel(HLE ~ income, 
                      data = left)
 
-geogress <- gwr(HLE ~ income_1998, 
+geogress <- gwr(HLE ~ income, 
                 data = left, 
                 bandwidth = bandwidth)
 
@@ -485,16 +484,16 @@ map_income<-
   geom_sf(data = background,
           aes(), fill = 'grey70', colour = NA, size = 0) +
   geom_sf(data = geogress,
-          aes(fill = factor(ntile(income_1998, 5))), size = 0.01, colour = 'gray70') +
+          aes(fill = factor(ntile(income, 5))), size = 0.01, colour = 'gray70') +
   scale_fill_manual(values = scico(palette = 'buda', 5, direction = -1),
-                    labels = str_sub(as.character(quantile(geogress$income_1998,
+                    labels = str_sub(as.character(quantile(geogress$income,
                                                            c(.1,.2,.4,.6,.8),na.rm = TRUE)), 1, 4),
-                    name = "coefficent",
+                    name = "coefficient",
                     guide = guide_discrete) +
   labs(caption = "income") +
   theme_map() +
   theme(plot.margin = margin(5, 30, 5, 30)) +
-  ggsave("test.png")
+  ggsave("income_coefficients.png", height = 8, width = 5, dpi = 300)
 
 ##
 
@@ -567,8 +566,6 @@ longform <-
   mutate(scaled = scale(value)) %>%
   mutate(tile = ntile(scaled, 10)) %>%
   ungroup()
-
-unique(longform$variable)
 
 map_layers <- 
   ggplot() + 
@@ -740,7 +737,10 @@ plot <- ggplot(rezzies) +
   theme_ver() +
   ggsave("scedasticity.png")
 
-p <- plot + map + plot_layout(widths = c(1, 2))
+p <- plot + map + 
+  plot_layout(widths = c(1, 2)) +
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
 
 ggsave(p, filename = "rezzies.png", height = 4, width = 8, dpi = 300)
 
@@ -758,8 +758,6 @@ summary_variables <-
   st_as_sf()
 
 ##
-
-area
 
 map <-
   ggplot(data = 
@@ -812,17 +810,19 @@ fit <- cv.glmnet(x, y, alpha = 0, type.measure = "mse", nfolds = 20)
 betas <- fit$glmnet.fit$beta
 mats <- as.matrix(betas)
 
-mats %>% 
+lambda_1 <-
+  mats %>% 
   as_tibble() %>% 
+  set_names(fit$lambda) %>%
   mutate(variable = names(df[, 3:ncol(df)])) %>%
   select(variable, everything()) %>%
-  pivot_longer(cols = s0:s93) %>%
+  pivot_longer(cols = as.character(fit$lambda)) %>%
   mutate(name = as.numeric(str_remove_all(name, "s"))) %>%
-  ggplot(aes(x = rev(name), y = value, colour = variable, linetype = variable)) +
+  ggplot(aes(x = log(name), y = value, colour = variable, linetype = variable)) +
   geom_line(size = 1, show.legend = FALSE) +
   scale_colour_manual(values = scico(palette = 'buda', 13)) +
   scale_y_continuous(breaks = c(-0.2, 0, 0.2), limits = c(-0.4, 0.4)) +
-  xlab("lambda") + 
+  xlab("lambda (logo)") + 
   ylab("beta") +
   theme_ver() +
   ggsave("demo_ridge.png")
@@ -832,18 +832,27 @@ fit <- cv.glmnet(x, y, alpha = 1, type.measure = "mse", nfolds = 20)
 betas <- fit$glmnet.fit$beta
 mats <- as.matrix(betas)
 
+length(fit$lambda)
 
-mats %>% 
-  as_tibble() %>% 
+lambda_2 <- 
+  mats %>% 
+  as_tibble() %>%
+  set_names(fit$lambda) %>%
   mutate(variable = names(df[, 3:ncol(df)])) %>%
   select(variable, everything()) %>%
-  pivot_longer(cols = s0:s93) %>%
+  pivot_longer(cols = as.character(fit$lambda)) %>%
   mutate(name = as.numeric(str_remove_all(name, "s"))) %>%
-  ggplot(aes(x = rev(name), y = value, colour = variable, linetype = variable)) +
+  ggplot(aes(x = log(name), y = value, colour = variable, linetype = variable)) +
   geom_line(size = 1, show.legend = FALSE) +
   scale_colour_manual(values = scico(palette = 'buda', 13)) +
-  scale_y_continuous(breaks = c(-1, 0, 1), limits = c(-2, 2)) + 
-  xlab("lambda") + 
+  scale_y_continuous(breaks = c(-1, 0, 1), limits = c(-2, 2), labels = c("-1.0", "0.0", "1.0")) + 
+  xlab("lambda (logo)") + 
   ylab("beta") +
   theme_ver() +
   ggsave("demo_lasso.png")
+
+p <- lambda_1 + lambda_2 + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(size = 8))
+
+ggsave(p, filename = "demo_lambdas.png", height = 5, width = 14)
