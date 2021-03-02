@@ -1,0 +1,110 @@
+---
+title: "Must All Maps be the Same?"
+author: "Andrew Renninger"
+institute: "University of Pennsylvania"
+date: "July 2020"
+output:
+  xaringan::moon_reader:
+    css: ["default", "andrew", "andrew-fonts"]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+background-image: url(https://raw.githubusercontent.com/asrenninger/gisruk/master/viz/windows.gif)
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+---
+
+# [1] Motivating
+
+The eldery population in developing countries age, as projected in England below, governments should ensure that citizens can be productive members of society into old age.
+
+![](viz/aging.gif)
+---
+
+# [2] The left side of a model
+
+Thus, we look at life expectancy and healthy life expectancy to see what policy levers are available help in this goal. In **a** we have the relationship between these variables and **b** maps the difference between them.
+
+![](viz/left.png)
+
+---
+
+# [3] The right side of a model
+
+![](viz/variables.png)
+
+---
+
+# [4] The role of geography
+
+Testing for local autocorrelation, we can see that areas with high differences between life expectancy and healthy life expectancy cluster in the North and areas with low differences cluster in the South. London is an exception here. 
+
+![](viz/quads.png)
+
+---
+
+# [5] How can we look at variations across space?
+
+We can run a series of regressions, focusing on each unique observation and limited to a certain bandwidth around it, where we store regression results at each turn. How the coefficents vary gives us important information about the spatial processes contributing to the gap between healthy life expectancy and life expectancy. 
+
+![](viz/combine.gif)
+
+---
+
+# [6] Refining our estimates
+
+Both ridge (**a**) and lasso (**b**) variants introduce a penalty term (**lambda**) that punishes coefficients for collinearity; ridge preserves your specification but lasso aids in feature selection by suppressing entirely less important coefficients.
+
+![](viz/demo_lambdas.png)
+
+---
+
+# [7] How do these approaches compare?
+
+Despite its dispersion, the **lasso has an RMSPE of 0.14** while comparable **ridge number is 1.96**, so the lasso performs best——in addition to help with feature selection. 
+
+![](viz/rezzies.png)
+
+---
+
+# [8] Feature selection with this approach
+
+We can map the lambda values and look at the variable importance. The North tends to have stronger penalties than the South, with the exception of London; unemployment——with certain——predicts changes to healthy life expectancy more than any other variables. 
+
+<img src="viz/lasso_results.png" height="400"/>
+
+---
+
+# [9] Coefficients
+
+![](viz/lifestyle_care_coefficients.png)
+
+---
+
+# [10] Coefficients
+
+![](viz/income_employment_coefficients.png)
+
+---
+
+# [11] Layering the results
+
+The urban penalty? The wealthiest urban areas have problems with lifespan and healthspan. Across the board, indicators of urbanity and longevity point in opposite directions, but with spatial variation. 
+
+![](viz/mcharg.png)
+
+---
+
+# Questions?
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/asrenninger/gisruk/master/viz/windows.gif" alt=""/>
+</p>
+
