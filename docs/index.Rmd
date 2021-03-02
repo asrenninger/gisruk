@@ -5,6 +5,7 @@ institute: "University of Pennsylvania"
 date: "July 2020"
 output:
   xaringan::moon_reader:
+    self_contained: true
     css: ["default", "andrew", "andrew-fonts"]
     lib_dir: libs
     nature:

@@ -1,0 +1,14 @@
+@import url(https://fonts.googleapis.com/css?family=IBM+Plex+Mono);
+@import url(https://fonts.googleapis.com/css?family=IBM+Plex+Sans:wght@700);
+
+body {
+  font-family: 'IBM Plex Mono';
+}
+
+h1, h2, h3 {
+  font-family: 'IBM Plex Sans';
+}
+
+.remark-code, .remark-inline-code {
+  font-family: 'IBM Plex Mono';
+}
